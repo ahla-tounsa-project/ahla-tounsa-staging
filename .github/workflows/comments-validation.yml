@@ -10,6 +10,7 @@ on:
       - '.github/workflows/comments-validation.yml'
   push:
     branches:
+      - main
       - integration/rebuild-from-main-2026-11-20
     paths:
       - 'comments.js'
@@ -72,3 +73,4 @@ jobs:
           grep -q 'grant insert (post_table, post_id, parent_id, user_id, body, status)' supabase/migrations/20261115144500_post_comments.sql
           grep -q 'is_own_post_comment' supabase/migrations/20261115144500_post_comments.sql
           grep -q 'escapeHtml(row.body)' comments.js
+          grep -q 'c.post_table' supabase/migrations/20261123193000_fix_public_comment_view_post_table.sql
