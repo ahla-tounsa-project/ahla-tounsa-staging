@@ -7,19 +7,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: "pages"
+  group: "staging-site-publish"
   cancel-in-progress: false
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -54,10 +49,6 @@ jobs:
           mkdir -p ../_site
           cp "$APK" ../_site/ahla-tounsa.apk
           echo "Verified direct APK size: $(stat -c%s "$APK") bytes"
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-        with:
-          enablement: true
       - name: Prepare public site
         run: |
           sudo apt-get update
@@ -143,13 +134,10 @@ jobs:
               raise SystemExit("Service worker home and index entries are missing.")
           print("Manifest, PNG dimensions, Apple icon and all offline-shell assets verified.")
           PY
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+      - name: Publish website to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
-          path: _site
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
-        with:
-          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./_site
+          force_orphan: true
