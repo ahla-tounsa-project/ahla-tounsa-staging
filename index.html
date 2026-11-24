@@ -2636,8 +2636,6 @@ async function loadMoreAdminRows(table){
   const {data:rowsData,error:rowsError}=await db.rpc("admin_list_posts",{p_table:table,p_limit:adminPageSize,p_offset:from});
   if(rowsError)throw rowsError;
   const rows=Array.isArray(rowsData)?rowsData:[];
-  if(result.error)throw result.error;
-  const rows=result.data||[];
   const holder=group.querySelector("[data-admin-entries]");
   if(holder&&rows.length)holder.insertAdjacentHTML("beforeend",rows.map(row=>renderAdminEntry(row,item)).join(""));
   adminPageOffsets[table]=from+rows.length;
