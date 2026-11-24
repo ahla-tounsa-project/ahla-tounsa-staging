@@ -29,6 +29,9 @@ Deno.serve(async(req:Request)=>{
   const update=await fetch(url+"/rest/v1/"+table+"?id=eq."+encodeURIComponent(String(id))+"&status=eq."+expected,{method:"PATCH",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify({status})});
   if(!update.ok)return reply({error:"تعذّر حفظ قرار المراجعة."},502);
   const changed=await update.json();if(!Array.isArray(changed)||!changed.length)return reply({error:"الإعلان تبدّلت حالته من قبل. حدّث القائمة."},409);
-  return reply({ok:true,message:status==="rejected"?"تم رفض الإعلان.":"تم إلغاء نشر الإعلان."});
+  const auditResponse=await fetch(url+"/rest/v1/admin_status_audit",{method:"POST",headers:{apikey:key,Authorization:"Bearer "+key,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({table_name:table,record_id:String(id),old_status:expected,new_status:status,actor_id:user.id})});
+  const auditLogged=auditResponse.ok;
+  if(!auditLogged)console.error("admin status audit insert failed",auditResponse.status,await auditResponse.text().catch(()=> ""));
+  return reply({ok:true,auditLogged,message:status==="rejected"?"تم رفض الإعلان.":"تم إلغاء نشر الإعلان."});
  }catch(error){console.error("admin-update-post-status",String(error));return reply({error:"صار خطأ أثناء تحديث حالة الإعلان."},500);}
 });
