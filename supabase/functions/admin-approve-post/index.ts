@@ -98,7 +98,10 @@ Deno.serve(async(req:Request)=>{
   const update=await fetch(auth.url+"/rest/v1/"+table+"?id=eq."+encodeURIComponent(String(id))+"&status=eq.pending",{method:"PATCH",headers:{apikey:auth.key,Authorization:"Bearer "+auth.key,"Content-Type":"application/json",Prefer:"return=representation"},body:JSON.stringify({status:"approved",expires_at:addCalendarMonths(new Date(),3).toISOString()})});
   if(!update.ok){console.error("approval status update failed",update.status,await update.text().catch(()=> ""));return reply({error:"تم تجهيز الصورة لكن لم تتأكد عملية النشر. حدّث القائمة قبل أي محاولة أخرى."},502);}
   const updated=await update.json();if(!Array.isArray(updated)||!updated.length)return reply({error:"الإعلان تبدّلت حالته من قبل. حدّث القائمة."},409);
+  const auditResponse=await fetch(auth.url+"/rest/v1/admin_status_audit",{method:"POST",headers:{apikey:auth.key,Authorization:"Bearer "+auth.key,"Content-Type":"application/json",Prefer:"return=minimal"},body:JSON.stringify({table_name:table,record_id:String(id),old_status:"pending",new_status:"approved",actor_id:auth.userId})});
+  const auditLogged=auditResponse.ok;
+  if(!auditLogged)console.error("admin status audit insert failed",auditResponse.status,await auditResponse.text().catch(()=> ""));
   await sendAdminAlert("تم نشر إعلان في أحلى توانسة", `تمت الموافقة على إعلان ونشره.\nالقسم: ${table}\nرقم الإعلان: ${id}\nالعنوان: ${String(row.title || "").slice(0, 120)}`);
-  return reply({ok:true,message:"تمت الموافقة على الإعلان ونشره."});
+  return reply({ok:true,auditLogged,message:"تمت الموافقة على الإعلان ونشره."});
  }catch(e){await sendAdminAlert("خطأ تقني في الموافقة على إعلان","تعذّر إكمال عملية الموافقة. راجع سجلات Supabase لمعرفة التفاصيل.");console.error("admin-approve-post error",String(e));return reply({error:"صار خطأ أثناء الموافقة."},500);}
 });
