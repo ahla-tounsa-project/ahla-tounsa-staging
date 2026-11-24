@@ -2633,7 +2633,9 @@ async function loadMoreAdminRows(table){
  adminLoading[table]=true;updateAdminLoadMore(item);
  try{
   const from=adminPageOffsets[table]||0,to=from+adminPageSize-1;
-  const result=await db.from(table).select("*").order("created_at",{ascending:false}).order("id",{ascending:true}).range(from,to);
+  const {data:rowsData,error:rowsError}=await db.rpc("admin_list_posts",{p_table:table,p_limit:adminPageSize,p_offset:from});
+  if(rowsError)throw rowsError;
+  const rows=Array.isArray(rowsData)?rowsData:[];
   if(result.error)throw result.error;
   const rows=result.data||[];
   const holder=group.querySelector("[data-admin-entries]");
@@ -2659,9 +2661,9 @@ async function renderAdmin(){
  adminTables.forEach(item=>{adminPageOffsets[item.table]=0;adminHasMore[item.table]=false;adminLoading[item.table]=false;});
  let htmlOut="";
  for(const item of adminTables){
-  const result=await db.from(item.table).select("*").order("created_at",{ascending:false}).order("id",{ascending:true}).range(0,adminPageSize-1);
-  if(result.error){htmlOut+=`<section data-admin-group="${item.table}"><h3>${item.label}</h3><div class="entry"><p>تعذّر التحميل: ${adminEscape(result.error.message)}</p></div></section>`;continue;}
-  const rows=result.data||[];
+  const {data:rowsData,error:rowsError}=await db.rpc("admin_list_posts",{p_table:item.table,p_limit:adminPageSize,p_offset:0});
+  if(rowsError){htmlOut+=`<section data-admin-group="${item.table}"><h3>${item.label}</h3><div class="entry"><p>تعذّر التحميل: ${adminEscape(rowsError.message)}</p></div></section>`;continue;}
+  const rows=Array.isArray(rowsData)?rowsData:[];
   adminPageOffsets[item.table]=rows.length;
   adminHasMore[item.table]=rows.length===adminPageSize;
   htmlOut+=`<section data-admin-group="${item.table}"><h3 data-admin-heading>${item.label} (${rows.length})</h3><div data-admin-entries>${rows.map(row=>renderAdminEntry(row,item)).join("")}</div><p class="muted" data-admin-load-error></p><button type="button" data-admin-more="${item.table}" class="${adminHasMore[item.table]?"":"hidden"}" style="margin:10px 0;background:#355c7d">تحميل 100 إعلان أقدم</button>${rows.length?"":'<p class="muted">ما فماش طلبات.</p>'}</section>`;
