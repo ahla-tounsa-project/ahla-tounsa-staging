@@ -3121,6 +3121,7 @@ el("admin-login-button").addEventListener("click",async()=>{
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.ok){alert(result.error||"ما نجّمش نوافق على الإعلان. حدّث القائمة وعاود.");return;}
+    if(result.auditLogged===false)alert("تمت الموافقة، لكن تعذّر تسجيل القرار في سجلّ المراجعة. يلزم مراجعة الإدارة.");
    }else{
     const {data:sessionData,error:sessionError}=await db.auth.getSession();
     if(sessionError||!sessionData?.session?.access_token){alert("جلسة الإدارة انتهت. عاود الدخول.");return;}
@@ -3131,6 +3132,7 @@ el("admin-login-button").addEventListener("click",async()=>{
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.ok){alert(result.error||"ما نجّمش نبدّل حالة الإعلان. حدّث القائمة وعاود.");return;}
+    if(result.auditLogged===false)alert("تم تغيير الحالة، لكن تعذّر تسجيل القرار في سجلّ المراجعة. يلزم مراجعة الإدارة.");
    }
    await renderAdmin();
   }catch(error){
