@@ -80,6 +80,26 @@ Deno.serve(async (req: Request) => {
       return reply({ error: "تأكيد الحذف غير صحيح." }, 400);
     }
 
+    // Re-check the password on the server; a valid but old session alone is not enough.
+    const password = body.password;
+    const publicKey = req.headers.get("apikey") || "";
+    if (typeof password !== "string" || password.length < 1 || password.length > 128 ||
+        !publicKey.startsWith("sb_publishable_") || typeof user.email !== "string") {
+      return reply({ error: "يلزم إعادة التثبت من كلمة المرور قبل حذف الحساب." }, 401);
+    }
+    const reauth = await fetch(url + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { "apikey": publicKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: user.email, password }),
+    });
+    if (!reauth.ok) {
+      return reply({ error: "كلمة المرور غير صحيحة أو تعذّر التثبت. ما تحذف حتى شيء." }, 401);
+    }
+    const freshSession = await reauth.json().catch(() => ({}));
+    if (!freshSession.user || freshSession.user.id !== user.id || typeof freshSession.access_token !== "string") {
+      return reply({ error: "تعذّر مطابقة التثبت مع الحساب الحالي. ما تحذف حتى شيء." }, 401);
+    }
+
     // Keep administrator accounts intact so the platform cannot lose its only owner.
     for (const roleTable of ["admins", "staff_roles"]) {
       const roleCheck = await api(
