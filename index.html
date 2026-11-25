@@ -1655,7 +1655,14 @@ main>section input[type="file"]::file-selector-button{
 <p id="member-message" class="muted" aria-live="polite"></p>
 </div>
 <div id="member-panel" class="hidden">
-<p id="member-welcome" class="muted"></p>
+<div id="member-welcome" class="entry" style="margin:12px 0;border:1px solid #cfe3d8;background:#f5fbf7">
+<div class="row" style="align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+<b>👤 هويتك في أحلى توانسة</b><span style="display:inline-flex;align-items:center;gap:6px;color:#18734b;font-weight:700">● متصل الآن</span>
+</div>
+<p style="margin:10px 0 4px">مرحبا بيك، <b id="member-account-email">حسابك</b></p>
+<p class="muted" style="margin:4px 0">حالة الحساب: <b style="color:#18734b">مسجّل الدخول ونشط</b></p>
+<p class="muted" style="margin:4px 0">عدد إعلاناتك: <b id="member-account-count">جاري التحقق...</b></p>
+</div>
 <div class="row" style="gap:8px;flex-wrap:wrap">
 <button type="button" id="member-refresh">تحديث إعلاناتي</button>
 <button type="button" id="member-logout" style="background:#647875">خروج من الحساب</button>
@@ -2895,7 +2902,9 @@ async function refreshMemberState(){
  login.classList.toggle("hidden",!!session);
  panel.classList.toggle("hidden",!session);
  if(!session){el("member-posts").textContent="";return;}
- el("member-welcome").textContent="مرحبا بيك في حسابك. إعلاناتك الخاصة تظهر هنا.";
+ const email=session.user?.email||"بريد غير متوفر";
+ el("member-account-email").textContent=email;
+ el("member-account-count").textContent="جاري التحقق...";
  await loadMemberPosts(session.access_token);
 }
 async function loadMemberPosts(token){
@@ -2910,6 +2919,8 @@ async function loadMemberPosts(token){
    for(const post of (result.posts?.[table]||[]))all.push({table,post});
   }
   all.sort((a,b)=>new Date(b.post.created_at||0)-new Date(a.post.created_at||0));
+  const countNode=el("member-account-count");
+  if(countNode)countNode.textContent=String(all.length);
   if(!all.length){host.innerHTML='<p class="muted">ما عندك حتى إعلان مربوط بالحساب هذا. الإعلانات اللي نشرتها قبل إنشاء الحساب ما تتربطش آلياً به.</p>';return;}
   host.innerHTML=all.map(({table,post})=>{
    const detail=[labels[table],memberStatusLabel(post.status),post.city||""].filter(Boolean).join(" • ");
