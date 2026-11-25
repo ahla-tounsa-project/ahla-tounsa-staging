@@ -687,6 +687,23 @@ main>section input[type="file"]::file-selector-button{
 </style>
 
 <style id="source-reference-style">.source-reference{color:inherit;text-decoration:none;cursor:default}</style>
+
+<style id="global-account-status-style">
+#global-account-status{
+ position:sticky;top:0;z-index:45;min-height:43px;padding:7px 14px;
+ display:flex;align-items:center;justify-content:center;gap:9px;
+ background:#fff;border-bottom:1px solid #e3eaf0;
+ box-shadow:0 3px 12px rgba(24,48,68,.06);
+ color:#526779;font-size:14px;font-weight:800;text-align:center;
+}
+#global-account-status .status-dot{width:10px;height:10px;flex:0 0 10px;border-radius:50%;background:#94a3b8}
+#global-account-status[data-state="active"]{color:#176b45;background:#f4fbf6}
+#global-account-status[data-state="active"] .status-dot{background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.12)}
+#global-account-status[data-state="offline"]{color:#64748b}
+#global-account-status[data-state="checking"]{color:#526779}
+nav{position:sticky;top:43px}
+@media(max-width:699px){#global-account-status{min-height:40px;padding:6px 10px;font-size:13px}nav{top:40px}}
+</style>
 </head>
 <body>
 <header>
@@ -704,6 +721,8 @@ main>section input[type="file"]::file-selector-button{
 <div>خدماتك وفرصتك وعقارك في بلاصة وحدة</div>
 
 </header>
+
+<div id="global-account-status" data-state="checking" role="status" aria-live="polite"><span class="status-dot" aria-hidden="true"></span><span id="global-account-status-text">نتثبتوا من حالة الاتصال...</span></div>
 
 <nav aria-label="القائمة الرئيسية">
 <button type="button" data-page="home" onclick="if(window.show){window.show('home');} return false;">الرئيسية</button>
@@ -2014,6 +2033,20 @@ const sendButton=clicked.closest("[data-table]");
 if(sendButton){if(sendButton.disabled)return;const oldText=sendButton.textContent;sendButton.disabled=true;sendButton.textContent="جاري الحفظ...";sendData(sendButton.dataset.table).finally(()=>{sendButton.disabled=false;sendButton.textContent=oldText;});}
 });
 
+function updateGlobalAccountStatus(session,state){
+ const bar=document.getElementById("global-account-status");
+ const label=document.getElementById("global-account-status-text");
+ if(!bar||!label)return;
+ if(state==="checking"){
+  bar.dataset.state="checking";label.textContent="نتثبتوا من حالة الاتصال...";
+ }else if(state==="error"){
+  bar.dataset.state="offline";label.textContent="تعذّر التثبت من الاتصال";
+ }else if(session?.user?.id){
+  bar.dataset.state="active";label.textContent="متصل ونشط";
+ }else{
+  bar.dataset.state="offline";label.textContent="غير متصل";
+ }
+}
 let authListenerInstalled=false;
 let adminSignupNotificationAttemptedFor="";
 function notifyRecentConfirmedSignup(session){
@@ -2096,6 +2129,7 @@ if(db && window.ahlaTounsaSupabase!==db){
 if(db)startSitePresence();
 if(db && !authListenerInstalled){
 db.auth.onAuthStateChange((event,session)=>{
+ updateGlobalAccountStatus(session);
  if(event==="PASSWORD_RECOVERY"){show("reset-password");}
  if(event==="SIGNED_IN"){
   notifyRecentConfirmedSignup(session);
@@ -2104,9 +2138,9 @@ db.auth.onAuthStateChange((event,session)=>{
 });
 authListenerInstalled=true;
 db.auth.getSession().then(({data,error})=>{
- if(error)console.warn("Signup notification session check:",error.message);
- else notifyRecentConfirmedSignup(data?.session);
-}).catch(error=>console.warn("Signup notification session check:",error));
+ if(error){updateGlobalAccountStatus(null,"error");console.warn("Signup notification session check:",error.message);}
+ else{updateGlobalAccountStatus(data?.session||null);notifyRecentConfirmedSignup(data?.session);}
+}).catch(error=>{updateGlobalAccountStatus(null,"error");console.warn("Signup notification session check:",error);});
 }
 
 }catch(error){console.error("Supabase connection setup:",error);}
